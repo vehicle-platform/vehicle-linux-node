@@ -7,7 +7,17 @@ The SDV/HPC layer running on a **Raspberry Pi 5 (8 GB)** (mostly Python, C++ whe
 2. Applications (each its own process, reading from Kuksa via gRPC): lane departure warning (LDW), combined anomaly model inference, HMI, ride video+telemetry overlay, black-box recorder, node health dashboard, OTA distribution (to MCUs over UDS), offline maps.
 3. Calls `vehicle-mcp` as a local subprocess/dependency, feeding its result as context to the cloud LLM.
 
-**Status:** skeleton, no code yet. The build system, tests and CI are added by `/repo-bootstrap vehicle-linux-node` when work on this repo starts (setup order: `vehicle-defs/docs/ARCHITECTURE.md` §9).
+**Status:** v0.1.0 skeleton (Raspi track L0). `vehicle_linux_node.defs` locates and parses the pinned defs files the Kuksa CAN bridge will read (`dbc/platform.dbc`, `gen/vss/vss_dbc.json`); its tests fail when a defs bump hands the bridge a VSS mapping it cannot resolve on the platform bus. Kuksa Databroker and the bridge follow next (L1).
+
+## Build and test
+
+```bash
+git submodule update --init --recursive   # external/vehicle-defs, pinned to a release tag
+uv sync
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest
+```
 
 - Architecture and decisions: [vehicle-defs/docs](https://github.com/vehicle-platform/vehicle-defs/tree/main/docs) (`ARCHITECTURE.md`, `DECISIONS.md`)
 - Signals, CAN IDs and DIDs come only from [vehicle-defs](https://github.com/vehicle-platform/vehicle-defs) (git submodule pinned to a tag)

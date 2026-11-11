@@ -1,0 +1,31 @@
+[project]
+name = "vehicle-linux-node"
+version = "0.1.0"
+description = "SDV layer on the Raspberry Pi 5: Kuksa Databroker, platform CAN to VSS, applications."
+readme = "README.md"
+authors = [{ name = "vehicle-platform" }]
+requires-python = ">=3.11"
+dependencies = [
+    "cantools>=39.4",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["external"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
