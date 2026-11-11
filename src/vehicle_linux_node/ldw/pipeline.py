@@ -82,16 +82,36 @@ class LaneResult:
     fit: LaneFit
 
 
+def _roll_matrix(shape: tuple[int, ...], lean_deg: float) -> np.ndarray:
+    h, w = shape[:2]
+    return cv2.getRotationMatrix2D((w / 2, h / 2), -lean_deg, 1.0)
+
+
 def derotate(img: Image, lean_deg: float) -> Image:
     """Undo the camera roll: a lean to the right rolls the image clockwise.
 
     The sign convention follows the DBC ``LEAN_ANGLE`` (positive = right).
+    Pixels with no source (the corners the roll uncovers) are filled with the
+    edge value; ``roll_valid_mask()`` tells which pixels are real.
     """
     if lean_deg == 0:
         return img
     h, w = img.shape[:2]
-    rot = cv2.getRotationMatrix2D((w / 2, h / 2), -lean_deg, 1.0)
+    rot = _roll_matrix(img.shape, lean_deg)
     return cv2.warpAffine(img, rot, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+
+
+def roll_valid_mask(shape: tuple[int, ...], lean_deg: float, erode_px: int = 5) -> Image:
+    """1 where ``derotate()`` had a source pixel, eroded so the seam adds no edge."""
+    h, w = shape[:2]
+    if lean_deg == 0:
+        return np.ones((h, w), dtype=np.uint8)
+    ones = np.ones((h, w), dtype=np.uint8)
+    valid = cv2.warpAffine(
+        ones, _roll_matrix(shape, lean_deg), (w, h), flags=cv2.INTER_NEAREST, borderValue=0
+    )
+    kernel = np.ones((2 * erode_px + 1, 2 * erode_px + 1), dtype=np.uint8)
+    return cv2.erode(valid, kernel)
 
 
 def undistort(img: Image, calibration: Calibration | None) -> Image:
@@ -183,7 +203,8 @@ def lane_offset(fit: LaneFit, cfg: LdwConfig) -> LaneResult:
 def process_frame(img_bgr: Image, cfg: LdwConfig, lean_deg: float = 0.0) -> LaneResult | None:
     """Full offline pipeline on one BGR frame; ``None`` when no lane pair is found."""
     frame = undistort(derotate(img_bgr, lean_deg), cfg.calibration)
-    warped = birds_eye(threshold(frame, cfg), cfg)
+    mask = threshold(frame, cfg) & roll_valid_mask(img_bgr.shape, lean_deg)
+    warped = birds_eye(mask, cfg)
     fit = fit_lanes(warped, cfg)
     return lane_offset(fit, cfg) if fit is not None else None
 
