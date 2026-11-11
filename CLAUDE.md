@@ -46,6 +46,10 @@ VEHICLE_KUKSA_ADDR=127.0.0.1:55555 VEHICLE_REPLAY_DIR=replay uv run pytest tests
 
 As built: `src/vehicle_linux_node/defs.py` (paths into the pinned defs, `load_platform_dbc()`, `dbc2vss_mappings()`), `tests/test_defs.py` (every `dbc2vss` signal exists once on `platform.dbc`, value maps use DBC value names); `replay.py` (`vehicle-linux-node-replay`: synthetic candump of every mapped platform message from the defs + `expected.json`), `tests/test_bridge_config.py` (provider receive-only, reads the pinned defs, images pinned), `tests/integration/` (values read back from the databroker, skipped without `VEHICLE_KUKSA_ADDR`). CI also fails unless the defs pin is a `vX.Y.Z` tag.
 
+## LDW offline stage (as built)
+
+`src/vehicle_linux_node/ldw/` (optional extra `ldw`: `uv sync --extra ldw`): `pipeline.py` = §5b.5 steps on one BGR frame (lean derotation, optional undistort, HLS + Sobel threshold, bird's-eye warp, sliding-window fit, offset in metres, `departure()` with indicator suppression), `synthetic.py` renders lanes with a known offset through the inverse warp (no recorded video in the repo, D-033), `cli.py` = `vehicle-linux-node-ldw <image|video|synthetic> [--lean-deg] [--indicator-on]`. `LdwConfig` holds camera geometry and provisional tuning (departure threshold 0.45 m, looser than a car); nothing opens a camera, CAN or Kuksa yet. Next: calibrate `src_quad` to the real mount, then lean from `Vehicle.Motorcycle.LeanAngle` and the indicator state from Kuksa.
+
 ## Context
 
 ARCHITECTURE §3, §5, §7 · `../vehicle-defs/docs/hardware-architecture.md` §5b.5, §5b.7-5b.9.

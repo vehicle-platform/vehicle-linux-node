@@ -7,7 +7,7 @@ The SDV/HPC layer running on a **Raspberry Pi 5 (8 GB)** (mostly Python, C++ whe
 2. Applications (each its own process, reading from Kuksa via gRPC): lane departure warning (LDW), combined anomaly model inference, HMI, ride video+telemetry overlay, black-box recorder, node health dashboard, OTA distribution (to MCUs over UDS), offline maps.
 3. Calls `vehicle-mcp` as a local subprocess/dependency, feeding its result as context to the cloud LLM.
 
-**Status:** v0.1.0 skeleton (Raspi track L0). `vehicle_linux_node.defs` locates and parses the pinned defs files the Kuksa CAN bridge will read (`dbc/platform.dbc`, `gen/vss/vss_dbc.json`); its tests fail when a defs bump hands the bridge a VSS mapping it cannot resolve on the platform bus. L1 adds Kuksa Databroker + kuksa-can-provider (`docker-compose.yml`, D-004) and a synthetic replay (`vehicle-linux-node-replay`) that CI pushes through the bridge and reads back from the databroker.
+**Status:** v0.1.0 skeleton (Raspi track L0). `vehicle_linux_node.defs` locates and parses the pinned defs files the Kuksa CAN bridge will read (`dbc/platform.dbc`, `gen/vss/vss_dbc.json`); its tests fail when a defs bump hands the bridge a VSS mapping it cannot resolve on the platform bus. L1 adds Kuksa Databroker + kuksa-can-provider (`docker-compose.yml`, D-004) and a synthetic replay (`vehicle-linux-node-replay`) that CI pushes through the bridge and reads back from the databroker. The LDW offline stage (`vehicle-linux-node-ldw`, extra `ldw`) runs the §5b.5 classic-CV pipeline on images, video or a synthetic lane with a known offset.
 
 ## Build and test
 
