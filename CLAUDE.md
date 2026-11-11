@@ -31,7 +31,16 @@ The SDV/HPC layer running on a **Raspberry Pi 5 (8 GB)** (mostly Python, C++ whe
 
 ## Build/run
 
-`uv` + `ruff` + `pytest` (D-007), Python 3.11+. Kuksa runs via `docker compose`. In development, recorded data is replayed with `vcan0/vcan1` + `canplayer`, so it works without a Raspi too.
+`uv` + `ruff` + `pytest` (D-007), Python 3.11+. Kuksa runs via `docker compose` (L1, not yet). In development, recorded data is replayed with `vcan0/vcan1` + `canplayer`, so it works without a Raspi too.
+
+```bash
+git submodule update --init --recursive   # external/vehicle-defs, pinned to v0.27.0
+uv sync
+uv run ruff check . && uv run ruff format --check .
+uv run pytest
+```
+
+As built: `src/vehicle_linux_node/defs.py` (paths into the pinned defs, `load_platform_dbc()`, `dbc2vss_mappings()`), `tests/test_defs.py` (every `dbc2vss` signal exists once on `platform.dbc`, value maps use DBC value names). CI also fails unless the defs pin is a `vX.Y.Z` tag.
 
 ## Context
 
