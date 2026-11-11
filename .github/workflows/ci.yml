@@ -54,7 +54,7 @@ jobs:
           version: "0.12.1"
 
       - name: Install dependencies
-        run: uv sync --locked --group integration
+        run: uv sync --locked --extra kuksa
 
       - name: Write the synthetic replay
         run: uv run vehicle-linux-node-replay replay/

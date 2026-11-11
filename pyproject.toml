@@ -12,8 +12,13 @@ dependencies = [
 [project.scripts]
 vehicle-linux-node-replay = "vehicle_linux_node.replay:main"
 vehicle-linux-node-ldw = "vehicle_linux_node.ldw.cli:main"
+vehicle-linux-node-blackbox = "vehicle_linux_node.blackbox.cli:main"
 
 [project.optional-dependencies]
+# Kuksa gRPC client for the on-vehicle services (black box); the CI kuksa-replay job installs it.
+kuksa = [
+    "kuksa-client>=0.6,<0.7",
+]
 ldw = [
     "numpy>=1.26",
     "opencv-python-headless>=4.10",
@@ -28,11 +33,6 @@ dev = [
     "pytest>=8.0",
     "pyyaml>=6",
     "ruff>=0.6",
-]
-
-# Only the CI kuksa-replay job installs this group (it builds slowly on macOS).
-integration = [
-    "kuksa-client>=0.6,<0.7",
 ]
 
 [tool.ruff]

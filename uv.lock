@@ -759,6 +759,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+kuksa = [
+    { name = "kuksa-client" },
+]
 ldw = [
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -771,17 +774,15 @@ dev = [
     { name = "pyyaml" },
     { name = "ruff" },
 ]
-integration = [
-    { name = "kuksa-client" },
-]
 
 [package.metadata]
 requires-dist = [
     { name = "cantools", specifier = ">=39.4" },
+    { name = "kuksa-client", marker = "extra == 'kuksa'", specifier = ">=0.6,<0.7" },
     { name = "numpy", marker = "extra == 'ldw'", specifier = ">=1.26" },
     { name = "opencv-python-headless", marker = "extra == 'ldw'", specifier = ">=4.10" },
 ]
-provides-extras = ["ldw"]
+provides-extras = ["kuksa", "ldw"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -789,7 +790,6 @@ dev = [
     { name = "pyyaml", specifier = ">=6" },
     { name = "ruff", specifier = ">=0.6" },
 ]
-integration = [{ name = "kuksa-client", specifier = ">=0.6,<0.7" }]
 
 [[package]]
 name = "wcwidth"
