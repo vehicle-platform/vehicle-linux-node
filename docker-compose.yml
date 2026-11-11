@@ -1,0 +1,44 @@
+# Kuksa Databroker + kuksa-can-provider (D-004): platform CAN -> VSS.
+#
+# Live (Raspi or a Linux host with vcan):
+#   CAN_PORT=vcan0 docker compose up -d
+# Synthetic replay, no SocketCAN needed (see docker-compose.replay.yml):
+#   uv run vehicle-linux-node-replay replay/
+#   docker compose -f docker-compose.yml -f docker-compose.replay.yml up -d
+#
+# Host networking: SocketCAN interfaces live in the host network namespace, and
+# the databroker only binds 127.0.0.1, so nothing is exposed off the device.
+services:
+  databroker:
+    image: ghcr.io/eclipse-kuksa/kuksa-databroker:0.7.1
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./external/vehicle-defs/gen/vss:/vss:ro
+    command:
+      - --address
+      - 127.0.0.1
+      - --port
+      - "55555"
+      - --vss
+      - /vss/vss_dbc.json
+      - --insecure
+
+  can-provider:
+    image: ghcr.io/eclipse-kuksa/kuksa-can-provider/can-provider:0.5.1
+    network_mode: host
+    restart: unless-stopped
+    depends_on:
+      - databroker
+    environment:
+      LOG_LEVEL: info
+    volumes:
+      - ./external/vehicle-defs:/defs:ro
+      - ./config:/config:ro
+    command:
+      - --config
+      - /config/dbc_feeder.ini
+      - --no-val2dbc
+      - --use-socketcan
+      - --canport
+      - ${CAN_PORT:-vcan0}
