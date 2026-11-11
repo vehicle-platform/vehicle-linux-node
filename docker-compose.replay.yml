@@ -1,0 +1,16 @@
+# Override: replay replay/platform_replay.log (from `vehicle-linux-node-replay replay/`)
+# through python-can's virtual bus inside the provider; no SocketCAN, works in CI.
+services:
+  can-provider:
+    restart: "no"
+    volumes:
+      - ./external/vehicle-defs:/defs:ro
+      - ./config:/config:ro
+      - ./replay:/replay:ro
+    command:
+      - --config
+      - /config/dbc_feeder.ini
+      - --no-val2dbc
+      - --dumpfile
+      - /replay/platform_replay.log
+      - --infinite

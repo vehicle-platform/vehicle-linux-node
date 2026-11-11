@@ -31,16 +31,20 @@ The SDV/HPC layer running on a **Raspberry Pi 5 (8 GB)** (mostly Python, C++ whe
 
 ## Build/run
 
-`uv` + `ruff` + `pytest` (D-007), Python 3.11+. Kuksa runs via `docker compose` (L1, not yet). In development, recorded data is replayed with `vcan0/vcan1` + `canplayer`, so it works without a Raspi too.
+`uv` + `ruff` + `pytest` (D-007), Python 3.11+. Kuksa runs via `docker compose` (`docker-compose.yml`: databroker 0.7.1 + kuksa-can-provider 0.5.1, host networking, `config/dbc_feeder.ini`, receive-only: `val2dbc` off). In development, recorded data is replayed with `vcan0/vcan1` + `canplayer`, so it works without a Raspi too.
 
 ```bash
 git submodule update --init --recursive   # external/vehicle-defs, pinned to v0.27.0
 uv sync
 uv run ruff check . && uv run ruff format --check .
 uv run pytest
+# end to end (Linux + Docker; the CI kuksa-replay job):
+uv sync --group integration && uv run vehicle-linux-node-replay replay/
+docker compose -f docker-compose.yml -f docker-compose.replay.yml up -d
+VEHICLE_KUKSA_ADDR=127.0.0.1:55555 VEHICLE_REPLAY_DIR=replay uv run pytest tests/integration
 ```
 
-As built: `src/vehicle_linux_node/defs.py` (paths into the pinned defs, `load_platform_dbc()`, `dbc2vss_mappings()`), `tests/test_defs.py` (every `dbc2vss` signal exists once on `platform.dbc`, value maps use DBC value names). CI also fails unless the defs pin is a `vX.Y.Z` tag.
+As built: `src/vehicle_linux_node/defs.py` (paths into the pinned defs, `load_platform_dbc()`, `dbc2vss_mappings()`), `tests/test_defs.py` (every `dbc2vss` signal exists once on `platform.dbc`, value maps use DBC value names); `replay.py` (`vehicle-linux-node-replay`: synthetic candump of every mapped platform message from the defs + `expected.json`), `tests/test_bridge_config.py` (provider receive-only, reads the pinned defs, images pinned), `tests/integration/` (values read back from the databroker, skipped without `VEHICLE_KUKSA_ADDR`). CI also fails unless the defs pin is a `vX.Y.Z` tag.
 
 ## Context
 

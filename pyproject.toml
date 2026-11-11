@@ -9,6 +9,9 @@ dependencies = [
     "cantools>=39.4",
 ]
 
+[project.scripts]
+vehicle-linux-node-replay = "vehicle_linux_node.replay:main"
+
 [build-system]
 requires = ["uv_build>=0.8.17,<0.9.0"]
 build-backend = "uv_build"
@@ -16,7 +19,13 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "pytest>=8.0",
+    "pyyaml>=6",
     "ruff>=0.6",
+]
+
+# Only the CI kuksa-replay job installs this group (it builds slowly on macOS).
+integration = [
+    "kuksa-client>=0.6,<0.7",
 ]
 
 [tool.ruff]
