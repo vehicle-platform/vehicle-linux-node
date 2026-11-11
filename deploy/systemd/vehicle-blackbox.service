@@ -1,0 +1,17 @@
+# Event-based black-box recorder fed by the databroker (hardware-architecture §5b.8).
+[Unit]
+Description=vehicle-platform black-box recorder
+After=vehicle-kuksa.service
+Wants=vehicle-kuksa.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/vehicle-linux-node
+Environment=VEHICLE_BLACKBOX_DIR=%h/vehicle-data/blackbox
+Environment=VEHICLE_KUKSA_ADDR=127.0.0.1:55555
+ExecStart=%h/vehicle-linux-node/.venv/bin/vehicle-linux-node-blackbox run
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

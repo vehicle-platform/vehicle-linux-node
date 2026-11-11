@@ -1,0 +1,16 @@
+# Optional listen-only tap on the CL250 vehicle bus (%i, e.g. can1) for raw logging.
+# vehicle-linux-node-can always sets listen-only on here (invariant 1).
+[Unit]
+Description=vehicle-platform vehicle bus listen-only tap on %i
+After=sys-subsystem-net-devices-%i.device
+BindsTo=sys-subsystem-net-devices-%i.device
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=%h/vehicle-linux-node
+ExecStart=%h/vehicle-linux-node/.venv/bin/vehicle-linux-node-can vehicle-tap %i
+ExecStop=/usr/sbin/ip link set %i down
+
+[Install]
+WantedBy=multi-user.target

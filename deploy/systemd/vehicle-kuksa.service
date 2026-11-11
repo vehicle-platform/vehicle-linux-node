@@ -1,0 +1,18 @@
+# Kuksa Databroker + kuksa-can-provider (docker compose, D-004).
+[Unit]
+Description=vehicle-platform Kuksa databroker and CAN provider
+Requires=docker.service
+After=docker.service network-online.target vehicle-can-platform@can0.service
+Wants=network-online.target vehicle-can-platform@can0.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=%h/vehicle-linux-node
+Environment=CAN_PORT=can0
+ExecStart=/usr/bin/docker compose -f docker-compose.yml up -d --remove-orphans
+ExecStop=/usr/bin/docker compose -f docker-compose.yml down
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target
