@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import json
 
-import numpy as np
 import pytest
 
 cv2 = pytest.importorskip("cv2", reason="install the `ldw` extra")
+np = pytest.importorskip("numpy")
 
 from vehicle_linux_node.ldw import cli  # noqa: E402
 from vehicle_linux_node.ldw.pipeline import LdwConfig, departure, process_frame  # noqa: E402
