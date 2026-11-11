@@ -13,6 +13,7 @@ dependencies = [
 vehicle-linux-node-replay = "vehicle_linux_node.replay:main"
 vehicle-linux-node-ldw = "vehicle_linux_node.ldw.cli:main"
 vehicle-linux-node-blackbox = "vehicle_linux_node.blackbox.cli:main"
+vehicle-linux-node-can = "vehicle_linux_node.canif:main"
 
 [project.optional-dependencies]
 # Kuksa gRPC client for the on-vehicle services (black box); the CI kuksa-replay job installs it.

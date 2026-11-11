@@ -1,0 +1,16 @@
+# Platform CAN interface (%i, e.g. can0): rt-core republishes vehicle signals here,
+# kuksa-can-provider listens. Bitrate from the defs (see vehicle-linux-node-can).
+[Unit]
+Description=vehicle-platform platform CAN bus on %i
+After=sys-subsystem-net-devices-%i.device
+BindsTo=sys-subsystem-net-devices-%i.device
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=%h/vehicle-linux-node
+ExecStart=%h/vehicle-linux-node/.venv/bin/vehicle-linux-node-can platform %i
+ExecStop=/usr/sbin/ip link set %i down
+
+[Install]
+WantedBy=multi-user.target

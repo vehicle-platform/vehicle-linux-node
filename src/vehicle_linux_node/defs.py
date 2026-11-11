@@ -22,6 +22,7 @@ from cantools.database.can import Database
 DEFS_ROOT = Path(__file__).resolve().parents[2] / "external" / "vehicle-defs"
 PLATFORM_DBC = DEFS_ROOT / "dbc" / "platform.dbc"
 VSS_DBC_JSON = DEFS_ROOT / "gen" / "vss" / "vss_dbc.json"
+DEFS_PYTHON = DEFS_ROOT / "gen" / "python"
 
 
 @dataclass(frozen=True)
@@ -70,3 +71,28 @@ def dbc2vss_mappings(path: Path = VSS_DBC_JSON) -> list[VssMapping]:
     """Every ``dbc2vss`` entry of the generated VSS tree, in tree order."""
     tree = json.loads(_require(path).read_text(encoding="utf-8"))
     return list(_walk(tree, ()))
+
+
+def vehicle_bus_bitrate() -> int:
+    """Bitrate of the CL250 vehicle bus from the generated ``vehicle_cl250`` module."""
+    import sys
+
+    if str(DEFS_PYTHON) not in sys.path:
+        sys.path.insert(0, str(_require(DEFS_PYTHON / "vehicle_defs" / "__init__.py").parents[1]))
+    from vehicle_defs import vehicle_cl250
+
+    return int(vehicle_cl250.BITRATE)
+
+
+def platform_bus_bitrate(db: Database | None = None) -> int | None:
+    """Bitrate of the platform bus from a ``Baudrate`` DBC attribute, or ``None``.
+
+    The platform DBC states 500 kbps (D-009) only in a comment today; until the
+    defs carry it as an attribute this returns ``None`` and callers must say so.
+    """
+    db = db if db is not None else load_platform_dbc()
+    dbc = db.dbc
+    if dbc is None or not dbc.attributes:
+        return None
+    attr = dbc.attributes.get("Baudrate")
+    return int(attr.value) if attr is not None else None
