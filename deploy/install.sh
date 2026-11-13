@@ -5,6 +5,8 @@
 #   cd ~/vehicle-linux-node && sh deploy/install.sh
 #
 # Then: sudo systemctl enable --now vehicle-can-platform@can0 vehicle-kuksa vehicle-blackbox
+# Live uplink (D-109, off by default): configure ~/.config/vehicle-live.env, then
+#   sudo systemctl enable --now vehicle-live
 # Optional vehicle tap:  sudo systemctl enable --now vehicle-can-vehicle-tap@can1
 set -eu
 here=$(cd "$(dirname "$0")/.." && pwd)
@@ -12,7 +14,7 @@ command -v uv >/dev/null 2>&1 || { echo "install uv first: https://docs.astral.s
 command -v docker >/dev/null 2>&1 || { echo "install docker + compose plugin first"; exit 1; }
 cd "$here"
 git submodule update --init --recursive
-uv sync --locked --extra kuksa
+uv sync --locked --extra kuksa --extra live
 mkdir -p "$HOME/vehicle-data/blackbox"
 # %h in the units resolves to the invoking user's home only for user units; for system
 # units we substitute it here so the services run as this user from this checkout.
