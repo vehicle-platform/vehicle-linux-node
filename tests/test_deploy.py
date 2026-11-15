@@ -49,6 +49,16 @@ def test_blackbox_waits_for_kuksa_and_restarts():
     assert unit.get("Service", "ExecStart").endswith("vehicle-linux-node-blackbox run")
 
 
+def test_live_unit_is_installed_but_never_enabled_by_the_installer():
+    unit = _unit("vehicle-live.service")
+    assert unit.get("Service", "ExecStart").endswith("vehicle-linux-node-live")
+    assert unit.get("Service", "RestartPreventExitStatus") == "2"
+    script = (UNITS.parent / "install.sh").read_text()
+    code = "\n".join(ln for ln in script.splitlines() if not ln.lstrip().startswith("#"))
+    assert "systemctl enable" not in code
+    assert "--extra live" in code
+
+
 def test_install_script_syncs_the_kuksa_extra():
     script = (UNITS.parent / "install.sh").read_text()
     assert "uv sync --locked --extra kuksa" in script

@@ -1,0 +1,20 @@
+# Live telemetry uplink Kuksa -> MQTT 5 (D-109, provisional). NOT enabled by install.sh:
+# configure ~/.config/vehicle-live.env first (see deploy/README.md).
+[Unit]
+Description=vehicle-platform live telemetry uplink (MQTT)
+After=vehicle-kuksa.service network-online.target
+Wants=vehicle-kuksa.service network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/vehicle-linux-node
+Environment=VEHICLE_KUKSA_ADDR=127.0.0.1:55555
+EnvironmentFile=-%h/.config/vehicle-live.env
+ExecStart=%h/vehicle-linux-node/.venv/bin/vehicle-linux-node-live
+Restart=on-failure
+RestartSec=5
+# exit 2 = missing/invalid configuration: do not restart-loop
+RestartPreventExitStatus=2
+
+[Install]
+WantedBy=multi-user.target

@@ -50,6 +50,10 @@ As built: `src/vehicle_linux_node/defs.py` (paths into the pinned defs, `load_pl
 
 `src/vehicle_linux_node/blackbox/` (extra `kuksa` for the service): `core.py` = pure ring of the last `pre_ms` per subscribed VSS leaf, `trigger()` opens an event (pre snapshot + post window, a repeat trigger extends up to `max_post_ms`), position paths refused by rule (D-076, invariant 7); `store.py` = one directory per event (`event.json` + `samples.jsonl`, `defs_version`), `prune()` keeps the newest `max_events`; `service.py` = `subscribe_current_values` on the `dbc2vss` leaves, triggers from `<dir>/trigger` (one reason per line, consumed) until an rt-core event path exists on VSS; CLI `vehicle-linux-node-blackbox [--dir] run|trigger <reason>` (`VEHICLE_BLACKBOX_DIR`, `VEHICLE_KUKSA_ADDR`). Integration test in the CI `kuksa-replay` job. Never touches CAN.
 
+## Live uplink (as built, D-109 provisional, T8)
+
+`src/vehicle_linux_node/live/` (extras `kuksa` + `live`): `core.py` = pure `LivePublisher` (topics `vehicle/<device_id>/live/<vss path>` `{"ts","value"}`, `/health`, retained `/state`, per-signal rate limit, bounded drop-oldest offline queue), `mqtt.py` = paho MQTT 5 transport + env config (`VEHICLE_MQTT_URL`, `VEHICLE_DEVICE_ID`, `VEHICLE_MQTT_TOKEN[_FILE]`), `service.py` = Kuksa subscribe loop (paths from the defs `dbc2vss`, position excluded), CLI `vehicle-linux-node-live`. The systemd unit `vehicle-live` is installed but never enabled by `install.sh`.
+
 ## Deployment (as built)
 
 `deploy/`: systemd units `vehicle-can-platform@<if>` (platform bus up, bitrate from the defs), `vehicle-can-vehicle-tap@<if>` (optional CL250 tap, `listen-only on` always), `vehicle-kuksa` (docker compose), `vehicle-blackbox`; `deploy/install.sh` syncs `--extra kuksa` and installs them; `vehicle-linux-node-can {platform|vehicle-tap} <if> [--dry-run]` builds the `ip link` commands (`src/vehicle_linux_node/canif.py`). Follow-up: the platform bus bitrate exists only as a DBC comment (D-009), so `platform` needs `--platform-bitrate` until the defs add a `Baudrate` attribute (`defs.platform_bus_bitrate()` reads it).
