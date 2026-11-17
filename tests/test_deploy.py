@@ -63,3 +63,28 @@ def test_install_script_syncs_the_kuksa_extra():
     script = (UNITS.parent / "install.sh").read_text()
     assert "uv sync --locked --extra kuksa" in script
     assert "git submodule update --init --recursive" in script
+
+
+CAN_UNITS = ("vehicle-can-platform@.service", "vehicle-can-vehicle-tap@.service")
+
+
+def test_only_the_can_units_get_net_admin():
+    for path in UNITS.glob("*.service"):
+        unit = _unit(path.name)
+        caps = unit.get("Service", "AmbientCapabilities", fallback="")
+        bound = unit.get("Service", "CapabilityBoundingSet", fallback=None)
+        if path.name in CAN_UNITS:
+            assert caps == "CAP_NET_ADMIN" and bound == "CAP_NET_ADMIN"
+        else:
+            assert caps == "" and bound != "CAP_NET_ADMIN"
+
+
+@pytest.mark.parametrize("name", [p.name for p in UNITS.glob("*.service")])
+def test_every_unit_is_sandboxed(name):
+    svc = _unit(name)["Service"]
+    assert svc["NoNewPrivileges"] == "yes"
+    assert svc["PrivateTmp"] == "yes"
+    if name != "vehicle-kuksa.service":  # docker compose: documented exception in the unit
+        assert svc["ProtectSystem"] == "strict"
+        assert svc["ProtectHome"] == "read-only"
+        assert "AF_CAN" not in svc["RestrictAddressFamilies"]

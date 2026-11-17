@@ -25,7 +25,7 @@ configure it: create `~/.config/vehicle-live.env` (mode 0600, never committed), 
 `sudo systemctl enable --now vehicle-live`.
 
 ```
-VEHICLE_MQTT_URL=mqtts://broker.example:8883   # mqtt:// for the plain local profile
+VEHICLE_MQTT_URL=mqtts://broker.example:8883   # plain mqtt:// only to loopback/private/.local hosts (else --allow-plaintext); never with position
 VEHICLE_DEVICE_ID=<device id>                  # MQTT username and topic prefix
 VEHICLE_MQTT_TOKEN_FILE=/home/<user>/.config/vehicle-live.token   # the device token (D-077 item 3)
 # optional: VEHICLE_LIVE_RATE_HZ=10  VEHICLE_LIVE_QUEUE_MAX=10000  VEHICLE_LIVE_HEALTH_FILE=<json>

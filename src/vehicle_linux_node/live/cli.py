@@ -10,7 +10,19 @@ from pathlib import Path
 
 from vehicle_linux_node.live import mqtt, service
 
+log = logging.getLogger(__name__)
 DEFAULT_ADDR = os.environ.get("VEHICLE_KUKSA_ADDR", "127.0.0.1:55555")
+
+
+def position_allowed(requested: bool, tls: bool) -> bool:
+    """Invariant 7: coordinates only over TLS to the own server, never in plaintext."""
+    if requested and not tls:
+        log.warning(
+            "--include-position ignored: the connection is plaintext mqtt://; "
+            "position fields are dropped (use mqtts://)"
+        )
+        return False
+    return requested
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -41,13 +53,19 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="also publish position paths (own server only, D-076)",
     )
+    parser.add_argument(
+        "--allow-plaintext",
+        action="store_true",
+        help="allow mqtt:// to a non-local host (token in clear; position is still never sent)",
+    )
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     try:
-        cfg = mqtt.config_from_env()
+        cfg = mqtt.config_from_env(allow_plaintext=args.allow_plaintext)
     except mqtt.ConfigError as exc:
         print(f"vehicle-linux-node-live: {exc}", file=sys.stderr)
         return 2
+    include_position = position_allowed(args.include_position, cfg.tls)
     transport = mqtt.PahoTransport(cfg)
     transport.start()
     try:
@@ -55,7 +73,7 @@ def main(argv: list[str] | None = None) -> int:
             args.address,
             transport,
             cfg.device_id,
-            paths=service.signal_paths(args.include_position),
+            paths=service.signal_paths(include_position),
             rate_hz=args.rate_hz,
             queue_max=args.queue_max,
             health_file=args.health_file,
