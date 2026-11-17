@@ -14,5 +14,13 @@ ExecStart=/usr/bin/docker compose -f docker-compose.yml up -d --remove-orphans
 ExecStop=/usr/bin/docker compose -f docker-compose.yml down
 TimeoutStartSec=300
 
+# Sandbox (B-11): only the options that cannot break `docker compose`. ProtectSystem,
+# ProtectHome and RestrictAddressFamilies stay off on purpose: the docker CLI writes
+# ~/.docker, talks to /run/docker.sock and the engine, and the unit runs as a docker-group
+# user (root-equivalent), so a stricter profile would only look safer.
+NoNewPrivileges=yes
+PrivateTmp=yes
+LockPersonality=yes
+
 [Install]
 WantedBy=multi-user.target

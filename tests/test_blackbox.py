@@ -153,3 +153,103 @@ def test_recorder_end_to_end_with_a_fake_clock(tmp_path: Path):
 def test_cli_trigger(tmp_path: Path, capsys):
     assert cli.main(["--dir", str(tmp_path), "trigger", "manual"]) == 0
     assert (tmp_path / service.TRIGGER_FILE).read_text() == "manual\n"
+
+
+def test_trigger_appended_during_read_is_not_lost(tmp_path: Path, monkeypatch):
+    service.fire_trigger(tmp_path, "first")
+    real_read = Path.read_text
+
+    def read_then_race(self, *a, **k):
+        text = real_read(self, *a, **k)
+        service.fire_trigger(tmp_path, "late")  # arrives between read and unlink
+        return text
+
+    monkeypatch.setattr(Path, "read_text", read_then_race)
+    assert service.read_triggers(tmp_path) == ["first"]
+    monkeypatch.undo()
+    assert service.read_triggers(tmp_path) == ["late"]
+
+
+def test_leftover_processing_file_is_read_after_a_crash(tmp_path: Path):
+    (tmp_path / "trigger.processing").write_text("crashed\n")
+    assert service.read_triggers(tmp_path) == ["crashed"]
+
+
+def test_trigger_lines_are_capped(tmp_path: Path):
+    for _ in range(service.MAX_TRIGGER_LINES + 20):
+        service.fire_trigger(tmp_path, "x" * 1000)
+    got = service.read_triggers(tmp_path)
+    assert len(got) == service.MAX_TRIGGER_LINES
+    assert all(len(r) == service.MAX_REASON_CHARS for r in got)
+
+
+def test_poll_loop_survives_exceptions_with_bounded_backoff():
+    import threading
+
+    stop = threading.Event()
+    waits: list[float] = []
+    calls = {"n": 0}
+
+    class Flaky:
+        def poll(self):
+            calls["n"] += 1
+            if calls["n"] <= 6:
+                raise FileExistsError("boom")
+            stop.set()
+
+    real_wait = stop.wait
+    stop.wait = lambda t=None: waits.append(t) or real_wait(0)  # type: ignore[method-assign]
+    service.poll_loop(Flaky(), stop, 0.2, backoff_max_s=1.0)  # type: ignore[arg-type]
+    assert calls["n"] == 7
+    assert waits[:6] == [0.4, 0.8, 1.0, 1.0, 1.0, 1.0]
+    assert waits[6] == 0.2
+
+
+def test_write_failure_does_not_kill_the_recorder(tmp_path: Path, monkeypatch):
+    now = {"ms": 0}
+    rec = service.Recorder(
+        tmp_path, pre_ms=500, post_ms=100, max_events=5, clock_ms=lambda: now["ms"]
+    )
+    rec.ingest({"Vehicle.Speed": 1.0})
+    rec.box.trigger("t", 0)
+
+    def boom(*a, **k):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(service, "write_event", boom)
+    now["ms"] = 200
+    rec.ingest({"Vehicle.Speed": 2.0})  # closes the event, write fails, no exception
+    assert rec.written == []
+
+
+def test_event_name_clash_gets_a_suffix_and_leaves_no_temp_dir(tmp_path: Path):
+    box = BlackBox(pre_ms=100, post_ms=10)
+    box.add(Sample(0, "Vehicle.Speed", 1.0))
+    box.trigger("same", 0)
+    ev = box.step(10)
+    when = datetime(2026, 1, 1, tzinfo=UTC)
+    a = write_event(ev, tmp_path, defs_version="v", wall_utc=when)
+    b = write_event(ev, tmp_path, defs_version="v", wall_utc=when)
+    assert a != b and (b / META_FILE).is_file()
+    assert [p.name for p in tmp_path.iterdir() if p.name.startswith(".tmp-")] == []
+
+
+def test_blackbox_files_and_dirs_are_owner_only(tmp_path: Path):
+    import os
+    import stat
+
+    old = os.umask(0)  # hostile umask: modes must still be restrictive
+    try:
+        root = tmp_path / "bb"
+        service.fire_trigger(root, "x")
+        assert stat.S_IMODE(root.stat().st_mode) == 0o700
+        assert stat.S_IMODE((root / service.TRIGGER_FILE).stat().st_mode) == 0o600
+        box = BlackBox(pre_ms=100, post_ms=10)
+        box.add(Sample(0, "Vehicle.Speed", 1.0))
+        box.trigger("r", 0)
+        out = write_event(box.step(10), root, defs_version="v")
+        assert stat.S_IMODE(out.stat().st_mode) == 0o700
+        for f in out.iterdir():
+            assert stat.S_IMODE(f.stat().st_mode) == 0o600
+    finally:
+        os.umask(old)

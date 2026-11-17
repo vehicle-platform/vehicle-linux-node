@@ -16,6 +16,9 @@ cd "$here"
 git submodule update --init --recursive
 uv sync --locked --extra kuksa --extra live
 mkdir -p "$HOME/vehicle-data/blackbox"
+chmod 700 "$HOME/vehicle-data" "$HOME/vehicle-data/blackbox"
+# User= goes into every unit. The two vehicle-can-* units get CAP_NET_ADMIN (and only
+# they) from their unit files, so `ip link set` works without root.
 # %h in the units resolves to the invoking user's home only for user units; for system
 # units we substitute it here so the services run as this user from this checkout.
 tmp=$(mktemp -d)

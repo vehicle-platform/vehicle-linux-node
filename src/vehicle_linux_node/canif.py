@@ -16,6 +16,8 @@ them, which is what the tests check.
 from __future__ import annotations
 
 import argparse
+import os
+import re
 import shutil
 import subprocess
 import sys
@@ -23,6 +25,22 @@ import sys
 from vehicle_linux_node import defs
 
 ROLES = ("platform", "vehicle-tap")
+
+# The interface wired to the CL250 vehicle bus. The platform role (normal mode, ACKs
+# frames) must never be brought up on it (invariant 1). Override via env or --tap-if.
+DEFAULT_TAP_IF = "can1"
+TAP_IF_ENV = "VEHICLE_CAN_TAP_IF"
+_IFNAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.@]{0,14}")  # no leading '-': never an ip option
+
+
+def validate_ifname(ifname: str) -> str:
+    if not _IFNAME.fullmatch(ifname):
+        raise SystemExit(f"invalid interface name {ifname!r}")
+    return ifname
+
+
+def tap_interface() -> str:
+    return os.environ.get(TAP_IF_ENV) or DEFAULT_TAP_IF
 
 
 def platform_commands(ifname: str, bitrate: int) -> list[list[str]]:
@@ -53,7 +71,20 @@ def vehicle_tap_commands(ifname: str, bitrate: int) -> list[list[str]]:
     ]
 
 
-def commands_for(role: str, ifname: str, platform_bitrate: int | None = None) -> list[list[str]]:
+def commands_for(
+    role: str,
+    ifname: str,
+    platform_bitrate: int | None = None,
+    tap_if: str | None = None,
+) -> list[list[str]]:
+    validate_ifname(ifname)
+    tap_if = tap_if or tap_interface()
+    if role == "platform" and ifname == tap_if:
+        raise SystemExit(
+            f"refusing role 'platform' on {ifname}: it is the configured vehicle-tap "
+            f"interface ({TAP_IF_ENV}); the platform role is normal mode and would "
+            "acknowledge ECU frames (invariant 1)"
+        )
     if role == "vehicle-tap":
         return vehicle_tap_commands(ifname, defs.vehicle_bus_bitrate())
     if role == "platform":
@@ -72,10 +103,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("role", choices=ROLES)
     parser.add_argument("ifname", help="SocketCAN interface, e.g. can0")
     parser.add_argument("--platform-bitrate", type=int, help="temporary until the defs carry it")
+    parser.add_argument(
+        "--tap-if", help=f"interface wired to the vehicle bus (default ${TAP_IF_ENV} or can1)"
+    )
     parser.add_argument("--dry-run", action="store_true", help="print the commands, run nothing")
     args = parser.parse_args(argv)
 
-    commands = commands_for(args.role, args.ifname, args.platform_bitrate)
+    commands = commands_for(args.role, args.ifname, args.platform_bitrate, args.tap_if)
     for cmd in commands:
         print(" ".join(cmd))
         if args.dry_run:

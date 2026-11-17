@@ -202,3 +202,94 @@ def test_run_with_fake_kuksa(monkeypatch, tmp_path):
     assert topics.count("vehicle/dev1/live/Vehicle.Speed") == 2
     assert "vehicle/dev1/live/Vehicle.Rpm" in topics
     assert live.stats.rejected == 0
+
+
+_BASE = {"VEHICLE_DEVICE_ID": "d1", "VEHICLE_MQTT_TOKEN": "t"}
+
+
+@pytest.mark.parametrize(
+    "host",
+    [
+        "127.0.0.1",
+        "localhost",
+        "10.1.2.3",
+        "192.168.0.5",
+        "172.16.0.1",
+        "169.254.1.1",
+        "pi.local",
+        "::1",
+    ],
+)
+def test_plaintext_allowed_to_local_hosts(host):
+    cfg = mqtt.config_from_env(
+        {**_BASE, "VEHICLE_MQTT_URL": f"mqtt://{host}"}
+        if ":" not in host
+        else {**_BASE, "VEHICLE_MQTT_URL": f"mqtt://[{host}]"}
+    )
+    assert not cfg.tls
+
+
+@pytest.mark.parametrize("host", ["vps.example", "8.8.8.8", "172.32.0.1"])
+def test_plaintext_refused_to_remote_hosts(host):
+    env = {**_BASE, "VEHICLE_MQTT_URL": f"mqtt://{host}"}
+    with pytest.raises(mqtt.ConfigError, match="plaintext"):
+        mqtt.config_from_env(env)
+    assert mqtt.config_from_env(env, allow_plaintext=True).host == host
+    assert mqtt.config_from_env({**env, "VEHICLE_MQTT_ALLOW_PLAINTEXT": "1"}).host == host
+    assert mqtt.config_from_env({**env, "VEHICLE_MQTT_URL": f"mqtts://{host}"}).tls
+
+
+def test_position_never_over_plaintext(caplog):
+    assert cli.position_allowed(True, tls=True) is True
+    assert cli.position_allowed(False, tls=False) is False
+    with caplog.at_level("WARNING"):
+        assert cli.position_allowed(True, tls=False) is False
+    assert "plaintext" in caplog.text
+
+
+def test_cli_refuses_remote_plaintext(monkeypatch, capsys):
+    monkeypatch.setenv("VEHICLE_MQTT_URL", "mqtt://vps.example")
+    monkeypatch.setenv("VEHICLE_DEVICE_ID", "d1")
+    monkeypatch.setenv("VEHICLE_MQTT_TOKEN", "t")
+    assert cli.main([]) == 2
+    assert "plaintext" in capsys.readouterr().err
+
+
+def test_token_file_with_open_mode_warns(tmp_path, caplog):
+    f = tmp_path / "tok"
+    f.write_text("secret\n")
+    f.chmod(0o644)
+    with caplog.at_level("WARNING"):
+        assert mqtt.read_token({"VEHICLE_MQTT_TOKEN_FILE": str(f)}) == "secret"
+    assert "chmod 600" in caplog.text
+    caplog.clear()
+    f.chmod(0o600)
+    with caplog.at_level("WARNING"):
+        mqtt.read_token({"VEHICLE_MQTT_TOKEN_FILE": str(f)})
+    assert "chmod" not in caplog.text
+
+
+def test_paho_queue_is_bounded(monkeypatch):
+    calls = {}
+
+    class FakeClient:
+        def __init__(self, *a, **k):
+            pass
+
+        def __getattr__(self, name):
+            return lambda *a, **k: calls.setdefault(name, a)
+
+    pkg = types.ModuleType("paho")
+    sub = types.ModuleType("paho.mqtt")
+    client_mod = types.ModuleType("paho.mqtt.client")
+    client_mod.Client = FakeClient
+    client_mod.CallbackAPIVersion = types.SimpleNamespace(VERSION2=2)
+    client_mod.MQTTv5 = 5
+    client_mod.MQTT_ERR_SUCCESS = 0
+    pkg.mqtt, sub.client = sub, client_mod
+    monkeypatch.setitem(sys.modules, "paho", pkg)
+    monkeypatch.setitem(sys.modules, "paho.mqtt", sub)
+    monkeypatch.setitem(sys.modules, "paho.mqtt.client", client_mod)
+    mqtt.PahoTransport(mqtt.BrokerConfig("h", 1883, False, "d", "t"))
+    assert calls["max_queued_messages_set"] == (mqtt.MAX_QUEUED_MESSAGES,)
+    assert calls["max_inflight_messages_set"] == (mqtt.MAX_INFLIGHT_MESSAGES,)

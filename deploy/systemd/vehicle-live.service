@@ -16,5 +16,20 @@ RestartSec=5
 # exit 2 = missing/invalid configuration: do not restart-loop
 RestartPreventExitStatus=2
 
+# Sandbox (B-11). ProtectHome=read-only, not yes: the checkout and venv live in $HOME.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+# No AF_CAN: applications never touch SocketCAN.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+UMask=0077
+
 [Install]
 WantedBy=multi-user.target

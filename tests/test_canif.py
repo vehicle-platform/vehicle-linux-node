@@ -39,3 +39,33 @@ def test_no_role_allows_dropping_listen_only_on_the_vehicle_bus():
 def test_unknown_role_rejected():
     with pytest.raises(SystemExit):
         canif.commands_for("tester", "can0")
+
+
+def test_platform_role_is_refused_on_the_vehicle_tap_interface(monkeypatch):
+    monkeypatch.delenv("VEHICLE_CAN_TAP_IF", raising=False)
+    with pytest.raises(SystemExit, match="vehicle-tap"):
+        canif.commands_for("platform", "can1", platform_bitrate=500000)
+    monkeypatch.setenv("VEHICLE_CAN_TAP_IF", "can7")
+    with pytest.raises(SystemExit, match="vehicle-tap"):
+        canif.commands_for("platform", "can7", platform_bitrate=500000)
+    assert canif.commands_for("platform", "can1", platform_bitrate=500000)
+    assert (
+        canif.main(
+            ["platform", "can1", "--tap-if", "can0", "--platform-bitrate", "500000", "--dry-run"]
+        )
+        == 0
+    )
+    with pytest.raises(SystemExit):
+        canif.main(
+            ["platform", "can0", "--tap-if", "can0", "--platform-bitrate", "500000", "--dry-run"]
+        )
+
+
+def test_tap_role_still_works_on_the_tap_interface():
+    assert canif.commands_for("vehicle-tap", "can1", tap_if="can1")
+
+
+@pytest.mark.parametrize("bad", ["-h", "can0;x", "", "a" * 16, "../x"])
+def test_bad_interface_names_are_rejected(bad):
+    with pytest.raises(SystemExit):
+        canif.commands_for("vehicle-tap", bad)
