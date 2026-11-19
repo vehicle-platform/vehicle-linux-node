@@ -88,3 +88,33 @@ def test_every_unit_is_sandboxed(name):
         assert svc["ProtectSystem"] == "strict"
         assert svc["ProtectHome"] == "read-only"
         assert "AF_CAN" not in svc["RestrictAddressFamilies"]
+
+
+def test_every_unit_has_an_exposure_threshold_and_the_ratchet_targets_hold():
+    """EDGE-1: `scripts/check_systemd_exposure.py` (CI job systemd-exposure) enforces these."""
+    import json
+
+    limits = json.loads((UNITS.parent / "exposure-thresholds.json").read_text())
+    limits.pop("_comment")
+    assert set(limits) == {p.name for p in UNITS.glob("*.service")}
+    assert limits["vehicle-blackbox.service"] <= 3.0
+    assert limits["vehicle-live.service"] <= 3.0
+    for name in CAN_UNITS:
+        assert limits[name] <= 5.0
+
+
+@pytest.mark.parametrize("name", ["vehicle-blackbox.service", "vehicle-live.service", *CAN_UNITS])
+def test_sandboxed_units_carry_the_extended_hardening(name):
+    svc = _unit(name)["Service"]
+    for key, value in {
+        "ProtectClock": "yes",
+        "ProtectHostname": "yes",
+        "ProtectProc": "invisible",
+        "ProcSubset": "pid",
+        "RestrictNamespaces": "yes",
+        "RestrictRealtime": "yes",
+        "SystemCallArchitectures": "native",
+        "SystemCallFilter": "@system-service",
+        "PrivateDevices": "yes",
+    }.items():
+        assert svc[key] == value, f"{name}: {key}"

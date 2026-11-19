@@ -86,3 +86,23 @@ jobs:
       - name: Stop
         if: always()
         run: docker compose -f docker-compose.yml -f docker-compose.replay.yml down
+
+  # EDGE-1: the sandbox options must be effective, not just present. systemd-analyze
+  # scores every unit offline (as installed: %h and User= substituted) against the
+  # ceiling in deploy/exposure-thresholds.json.
+  systemd-exposure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: systemd version
+        run: systemd-analyze --version | head -1
+
+      - name: Exposure score per unit (fails above the threshold)
+        run: |
+          set -o pipefail
+          python3 scripts/check_systemd_exposure.py --markdown | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Full per-check output (diagnostics)
+        if: always()
+        run: python3 scripts/check_systemd_exposure.py --verbose || true
