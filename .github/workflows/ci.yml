@@ -30,7 +30,7 @@ jobs:
         with:
           version: "0.12.1"
 
-      - name: Install dependencies (all extras: OpenCV tests run, mypy sees every import)
+      - name: Install dependencies (all extras, so OpenCV tests run and mypy sees every import)
         run: uv sync --locked --all-extras
 
       - name: Lint (ruff check)
