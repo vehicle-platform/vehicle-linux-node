@@ -74,7 +74,6 @@ def vehicle_tap_commands(ifname: str, bitrate: int) -> list[list[str]]:
 def commands_for(
     role: str,
     ifname: str,
-    platform_bitrate: int | None = None,
     tap_if: str | None = None,
 ) -> list[list[str]]:
     validate_ifname(ifname)
@@ -88,12 +87,9 @@ def commands_for(
     if role == "vehicle-tap":
         return vehicle_tap_commands(ifname, defs.vehicle_bus_bitrate())
     if role == "platform":
-        bitrate = platform_bitrate if platform_bitrate is not None else defs.platform_bus_bitrate()
+        bitrate = defs.platform_bus_bitrate()
         if bitrate is None:
-            raise SystemExit(
-                "platform bus bitrate is not in the defs yet (no Baudrate attribute in "
-                "platform.dbc); pass --platform-bitrate explicitly (D-009 states 500 kbps)"
-            )
+            raise SystemExit("platform.dbc carries no Baudrate attribute (defs >= v0.28.0)")
         return platform_commands(ifname, bitrate)
     raise SystemExit(f"unknown role {role!r}")
 
@@ -102,14 +98,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="vehicle-linux-node-can", description=__doc__)
     parser.add_argument("role", choices=ROLES)
     parser.add_argument("ifname", help="SocketCAN interface, e.g. can0")
-    parser.add_argument("--platform-bitrate", type=int, help="temporary until the defs carry it")
     parser.add_argument(
         "--tap-if", help=f"interface wired to the vehicle bus (default ${TAP_IF_ENV} or can1)"
     )
     parser.add_argument("--dry-run", action="store_true", help="print the commands, run nothing")
     args = parser.parse_args(argv)
 
-    commands = commands_for(args.role, args.ifname, args.platform_bitrate, args.tap_if)
+    commands = commands_for(args.role, args.ifname, args.tap_if)
     for cmd in commands:
         print(" ".join(cmd))
         if args.dry_run:

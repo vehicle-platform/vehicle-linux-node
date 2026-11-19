@@ -87,8 +87,8 @@ def vehicle_bus_bitrate() -> int:
 def platform_bus_bitrate(db: Database | None = None) -> int | None:
     """Bitrate of the platform bus from a ``Baudrate`` DBC attribute, or ``None``.
 
-    The platform DBC states 500 kbps (D-009) only in a comment today; until the
-    defs carry it as an attribute this returns ``None`` and callers must say so.
+    Defs >= v0.28.0 carry it on ``platform.dbc`` (500000, D-009); ``None`` only
+    for an older pin, and callers must say so.
     """
     db = db if db is not None else load_platform_dbc()
     dbc = db.dbc
