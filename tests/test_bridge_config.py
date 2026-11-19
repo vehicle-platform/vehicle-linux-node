@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import configparser
+import re
 from pathlib import Path
 
 import pytest
@@ -57,8 +58,27 @@ def test_images_are_pinned(compose):
         image = service.get("image")
         if image is None:
             continue
-        tag = image.rsplit(":", 1)[-1]
+        ref, _, digest = image.partition("@")
+        tag = ref.rsplit(":", 1)[-1]
         assert tag[0].isdigit(), f"{name}: {image} is not pinned to a version"
+        assert re.fullmatch(r"sha256:[0-9a-f]{64}", digest), f"{name}: {image} has no digest pin"
+
+
+def test_containers_are_hardened():
+    compose = yaml.safe_load((ROOT / "docker-compose.yml").read_text())
+    for name, service in compose["services"].items():
+        assert "no-new-privileges:true" in service["security_opt"], name
+        assert service["cap_drop"] == ["ALL"], name
+        assert "cap_add" not in service, name
+        assert service["read_only"] is True, name
+
+
+def test_databroker_insecure_is_loopback_only():
+    """--insecure is provisional (EDGE-2): it is only allowed while the bind is loopback."""
+    compose = yaml.safe_load((ROOT / "docker-compose.yml").read_text())
+    command = compose["services"]["databroker"]["command"]
+    assert "--insecure" in command
+    assert command[command.index("--address") + 1] == "127.0.0.1"
 
 
 def test_databroker_loads_the_same_vss_json():

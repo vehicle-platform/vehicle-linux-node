@@ -1,0 +1,7 @@
+version: 2
+updates:
+  # EDGE-2: keeps the image digests in docker-compose.yml current.
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
