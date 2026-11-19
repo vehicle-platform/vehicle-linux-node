@@ -30,8 +30,8 @@ jobs:
         with:
           version: "0.12.1"
 
-      - name: Install dependencies (with the ldw extra, so the OpenCV tests run)
-        run: uv sync --locked --extra ldw
+      - name: Install dependencies (all extras, so OpenCV tests run and mypy sees every import)
+        run: uv sync --locked --all-extras
 
       - name: Lint (ruff check)
         run: uv run ruff check .
@@ -39,8 +39,16 @@ jobs:
       - name: Format check (ruff format)
         run: uv run ruff format --check .
 
-      - name: Test
-        run: uv run pytest
+      - name: Type check (mypy)
+        run: uv run mypy
+
+      - name: Test (coverage floor in pyproject)
+        run: uv run pytest --cov --cov-report=term-missing
+
+      - name: Dependency audit (pip-audit on the locked set)
+        run: |
+          uv export --frozen --no-hashes --all-extras --no-emit-project -o "$RUNNER_TEMP/req.txt"
+          uvx pip-audit -r "$RUNNER_TEMP/req.txt" --disable-pip --no-deps --strict
 
   # D-004 end to end: synthetic platform-bus replay -> kuksa-can-provider ->
   # Kuksa Databroker, then read every mapped VSS value back over gRPC.

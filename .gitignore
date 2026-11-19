@@ -8,3 +8,6 @@ dist/
 build/
 *.egg-info/
 replay/
+.coverage
+coverage.xml
+.mypy_cache/
