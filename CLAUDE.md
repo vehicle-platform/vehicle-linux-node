@@ -56,7 +56,7 @@ As built: `src/vehicle_linux_node/defs.py` (paths into the pinned defs, `load_pl
 
 ## Deployment (as built)
 
-`deploy/`: systemd units `vehicle-can-platform@<if>` (platform bus up, bitrate from the defs), `vehicle-can-vehicle-tap@<if>` (optional CL250 tap, `listen-only on` always), `vehicle-kuksa` (docker compose), `vehicle-blackbox`; `deploy/install.sh` syncs `--extra kuksa` and installs them; `vehicle-linux-node-can {platform|vehicle-tap} <if> [--dry-run]` builds the `ip link` commands (`src/vehicle_linux_node/canif.py`). Follow-up: the platform bus bitrate exists only as a DBC comment (D-009), so `platform` needs `--platform-bitrate` until the defs add a `Baudrate` attribute (`defs.platform_bus_bitrate()` reads it).
+`deploy/`: systemd units `vehicle-can-platform@<if>` (platform bus up, bitrate from the defs), `vehicle-can-vehicle-tap@<if>` (optional CL250 tap, `listen-only on` always), `vehicle-kuksa` (docker compose), `vehicle-blackbox`; `deploy/install.sh` syncs `--extra kuksa` and installs them; `vehicle-linux-node-can {platform|vehicle-tap} <if> [--dry-run]` builds the `ip link` commands (`src/vehicle_linux_node/canif.py`). The platform bitrate is the `Baudrate` attribute of `platform.dbc` (`defs.platform_bus_bitrate()`); no CLI override.
 
 ## LDW offline stage (as built)
 

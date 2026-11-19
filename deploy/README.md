@@ -15,8 +15,7 @@ CAN HAT: enable the overlay for your board in `/boot/firmware/config.txt`
 (e.g. `dtoverlay=mcp251xfd,spi0-0,interrupt=25` for an MCP2518FD HAT) and reboot; the
 units bind to `sys-subsystem-net-devices-<if>.device`.
 
-Until the defs carry the platform bus bitrate as a DBC attribute, `vehicle-linux-node-can platform`
-needs `--platform-bitrate` (D-009 states 500 kbps); the unit is updated when the defs attribute lands.
+The platform bus bitrate is read from the `Baudrate` attribute of `platform.dbc` (defs >= v0.28.0); there is no CLI override.
 
 ## Live uplink (`vehicle-live`, D-109 provisional)
 
