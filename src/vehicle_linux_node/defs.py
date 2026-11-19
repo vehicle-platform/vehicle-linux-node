@@ -96,3 +96,11 @@ def platform_bus_bitrate(db: Database | None = None) -> int | None:
         return None
     attr = dbc.attributes.get("Baudrate")
     return int(attr.value) if attr is not None else None
+
+
+def vss_node(path: str, tree_path: Path = VSS_DBC_JSON) -> Mapping[str, Any]:
+    """The generated VSS tree entry for a dotted path (branch or leaf); ``KeyError`` if absent."""
+    node: Mapping[str, Any] = json.loads(_require(tree_path).read_text(encoding="utf-8"))
+    for part in path.split("."):
+        node = node["children"][part] if "children" in node else node[part]
+    return node
