@@ -54,6 +54,10 @@ As built: `src/vehicle_linux_node/defs.py` (paths into the pinned defs, `load_pl
 
 `src/vehicle_linux_node/live/` (extras `kuksa` + `live`): `core.py` = pure `LivePublisher` (topics `vehicle/<device_id>/live/<vss path>` `{"ts","value"}`, `/health`, retained `/state`, per-signal rate limit, bounded drop-oldest offline queue), `mqtt.py` = paho MQTT 5 transport + env config (`VEHICLE_MQTT_URL`, `VEHICLE_DEVICE_ID`, `VEHICLE_MQTT_TOKEN[_FILE]`), `service.py` = Kuksa subscribe loop (paths from the defs `dbc2vss`, position excluded), CLI `vehicle-linux-node-live`. The systemd unit `vehicle-live` is installed but never enabled by `install.sh`.
 
+## Node-health panel (as built, L2, D-108 provisional, T7)
+
+`src/vehicle_linux_node/nodehealth/`: `core.py` = pure `NodeHealth` (specs derived from the defs VSS tree `Vehicle.Motorcycle.Nodes.*`; mode names from the leaf `allowed` list; STALE after `N x interval_ms` with N parsed from the defs "stale after N frame cycles" text, judged by the value timestamp; MISSING when never seen; uptime decrease = restarted; stale rows show no numbers), `render()` text table; `service.py` = `subscribe_current_values` loop (extra `kuksa`); CLI `vehicle-linux-node-nodehealth [--address] [--refresh-s]`. Display only, never feeds a decision. Needs a real Pi to confirm the databroker keeps emitting updates/timestamps per heartbeat frame. `Validity.*` leaves are not shown (they gate the VehicleEngine frame, not a node).
+
 ## Deployment (as built)
 
 `deploy/`: systemd units `vehicle-can-platform@<if>` (platform bus up, bitrate from the defs), `vehicle-can-vehicle-tap@<if>` (optional CL250 tap, `listen-only on` always), `vehicle-kuksa` (docker compose), `vehicle-blackbox`; `deploy/install.sh` syncs `--extra kuksa` and installs them; `vehicle-linux-node-can {platform|vehicle-tap} <if> [--dry-run]` builds the `ip link` commands (`src/vehicle_linux_node/canif.py`). The platform bitrate is the `Baudrate` attribute of `platform.dbc` (`defs.platform_bus_bitrate()`); no CLI override.
