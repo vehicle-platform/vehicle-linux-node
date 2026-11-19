@@ -1,8 +1,8 @@
 {
   "_comment": "Maximum `systemd-analyze security --offline` exposure score per unit (lower is better; 10 is fully exposed). EDGE-1: ratchet DOWN when a unit improves, never raise without a reason in the PR. vehicle-kuksa is the documented docker-compose exception (see the unit file).",
-  "vehicle-blackbox.service": 3.0,
-  "vehicle-live.service": 3.0,
-  "vehicle-can-platform@.service": 5.0,
-  "vehicle-can-vehicle-tap@.service": 5.0,
-  "vehicle-kuksa.service": 9.6
+  "vehicle-blackbox.service": 1.8,
+  "vehicle-live.service": 1.8,
+  "vehicle-can-platform@.service": 1.8,
+  "vehicle-can-vehicle-tap@.service": 1.8,
+  "vehicle-kuksa.service": 8.8
 }
