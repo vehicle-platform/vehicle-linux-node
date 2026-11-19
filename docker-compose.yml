@@ -21,7 +21,7 @@
 # the databroker only binds 127.0.0.1, so nothing is exposed off the device.
 services:
   databroker:
-    image: ghcr.io/eclipse-kuksa/kuksa-databroker:0.7.1@sha256:529d8c6d3cc223362667672978bcb8f92c4d356b25aedd336e7a2e004d7279bd
+    image: ghcr.io/eclipse-kuksa/kuksa-databroker:0.7.2@sha256:27a134f15e3caf79156c72434123babb26e9b80bd5423434c85061d074f74658
     network_mode: host
     security_opt:
       - no-new-privileges:true
