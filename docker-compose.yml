@@ -6,12 +6,30 @@
 #   uv run vehicle-linux-node-replay replay/
 #   docker compose -f docker-compose.yml -f docker-compose.replay.yml up -d
 #
+# Images are pinned by digest (EDGE-2; the multi-arch index digest, so amd64 CI and the arm64
+# Pi resolve the same release). The tag stays for readability. To bump: resolve the new digest
+# with `docker buildx imagetools inspect <image>:<tag>` and edit both together (Dependabot's
+# docker-compose ecosystem does this). Containers run with no-new-privileges, all capabilities
+# dropped and a read-only root fs (SocketCAN needs no capability to open and read a CAN socket).
+#
+# Auth (provisional, EDGE-2): the databroker runs --insecure, acceptable only because it binds
+# 127.0.0.1 and has one writer (can-provider) plus our own read-only services. Switch to JWT
+# (--jwt-public-key, tokens via systemd LoadCredential=) as soon as a second consumer appears
+# or the bind leaves loopback; TLS only for non-loopback use. Never expose --insecure off-device.
+#
 # Host networking: SocketCAN interfaces live in the host network namespace, and
 # the databroker only binds 127.0.0.1, so nothing is exposed off the device.
 services:
   databroker:
-    image: ghcr.io/eclipse-kuksa/kuksa-databroker:0.7.1
+    image: ghcr.io/eclipse-kuksa/kuksa-databroker:0.7.1@sha256:529d8c6d3cc223362667672978bcb8f92c4d356b25aedd336e7a2e004d7279bd
     network_mode: host
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
     restart: unless-stopped
     volumes:
       - ./external/vehicle-defs/gen/vss:/vss:ro
@@ -25,8 +43,15 @@ services:
       - --insecure
 
   can-provider:
-    image: ghcr.io/eclipse-kuksa/kuksa-can-provider/can-provider:0.5.1
+    image: ghcr.io/eclipse-kuksa/kuksa-can-provider/can-provider:0.5.1@sha256:41f5abffe30be4dd0bf6d82f28ca149d327e2d6de8619b562a12035a30da0c8e
     network_mode: host
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
     restart: unless-stopped
     depends_on:
       - databroker

@@ -63,3 +63,17 @@ systemctl status vehicle-blackbox --no-pager && journalctl -u vehicle-blackbox -
 ```
 
 If a unit fails to start under the filter, loosen only the failing option and record why.
+
+## Kuksa images and auth (EDGE-2)
+
+`docker-compose.yml` pins both images by digest (`image:tag@sha256:...`, the multi-arch index
+digest, so CI amd64 and the Pi arm64 get the same release) and starts them with
+`no-new-privileges`, `cap_drop: ALL` and a read-only root. Dependabot (docker-compose) bumps the
+digests. `--insecure` stays on the databroker **provisionally**: it binds 127.0.0.1, has one
+writer (can-provider) and only our own readers. Move to databroker JWT (`--jwt-public-key`,
+tokens via systemd `LoadCredential=`) when a second consumer or a non-loopback bind appears.
+
+On the Pi, once: `sudo systemctl restart vehicle-kuksa`, then `docker compose ps` and
+`docker compose logs can-provider | tail` must show both services up and frames flowing from
+`can0`. If the provider cannot open the CAN socket under `cap_drop: ALL`, add back only the
+capability the log names (`cap_add`) and record why.
