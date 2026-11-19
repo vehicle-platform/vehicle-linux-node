@@ -28,8 +28,6 @@ services:
     cap_drop:
       - ALL
     read_only: true
-    tmpfs:
-      - /tmp
     restart: unless-stopped
     volumes:
       - ./external/vehicle-defs/gen/vss:/vss:ro
@@ -50,8 +48,9 @@ services:
     cap_drop:
       - ALL
     read_only: true
+    # dbcfeeder is a PyInstaller bundle: it unpacks libraries into /tmp and maps them executable.
     tmpfs:
-      - /tmp
+      - /tmp:exec
     restart: unless-stopped
     depends_on:
       - databroker
