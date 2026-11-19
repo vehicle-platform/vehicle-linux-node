@@ -40,3 +40,26 @@ VEHICLE_MQTT_TOKEN_FILE=/home/<user>/.config/vehicle-live.token   # the device t
 - Position paths are not published unless `--include-position` is added (D-076, own server only).
 - Missing config exits with status 2 and systemd does not restart-loop it.
 - `uv sync --locked --extra kuksa --extra live` (done by `install.sh`) provides paho-mqtt.
+
+## Verifying the sandbox (EDGE-1)
+
+The hardening options in the units are scored, not just present. CI job `systemd-exposure`
+runs `scripts/check_systemd_exposure.py`, which feeds every unit (as `install.sh` rewrites it)
+to `systemd-analyze security --offline=true` and fails when a score exceeds the ceiling in
+`deploy/exposure-thresholds.json` (blackbox/live 3.0, CAN units 5.0, `vehicle-kuksa` the
+documented docker-compose exception). Ratchet a ceiling down when a unit improves; never raise
+one without a reason in the PR. Not enabled in the units on purpose: `MemoryDenyWriteExecute`
+(grpc/numpy/OpenCV wheels may map W+X pages; try it on the Pi first).
+
+On the Pi (once, after `install.sh`; needs systemd 252+ for `--offline`):
+
+```bash
+python3 scripts/check_systemd_exposure.py --verbose   # same gate as CI, per-check detail
+systemd-analyze security vehicle-blackbox.service vehicle-live.service \
+    vehicle-can-platform@can0.service vehicle-kuksa.service   # live, installed units
+sudo systemctl restart vehicle-can-platform@can0 vehicle-kuksa vehicle-blackbox
+systemctl status vehicle-blackbox --no-pager && journalctl -u vehicle-blackbox -n 30 --no-pager
+# a sandbox that starts but kills the process shows up as status=31/SYS (seccomp) or EPERM/EROFS in the journal
+```
+
+If a unit fails to start under the filter, loosen only the failing option and record why.
