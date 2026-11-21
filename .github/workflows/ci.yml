@@ -13,9 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # vehicle-defs is public (D-033): the submodule needs no secret.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           submodules: recursive
+          persist-credentials: false
 
       # D-003/D-036: consumers pin defs to a release tag, never a branch commit.
       - name: Defs pin must be a release tag
@@ -26,7 +27,7 @@ jobs:
           echo "defs pin: $tag"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39 # v3.2.4
         with:
           version: "0.12.1"
 
@@ -55,12 +56,13 @@ jobs:
   kuksa-replay:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           submodules: recursive
+          persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39 # v3.2.4
         with:
           version: "0.12.1"
 
@@ -93,7 +95,9 @@ jobs:
   systemd-exposure:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - name: systemd version
         run: systemd-analyze --version | head -1
