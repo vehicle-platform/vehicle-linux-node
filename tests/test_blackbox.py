@@ -253,3 +253,25 @@ def test_blackbox_files_and_dirs_are_owner_only(tmp_path: Path):
             assert stat.S_IMODE(f.stat().st_mode) == 0o600
     finally:
         os.umask(old)
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["derived.altitude_change", "Vehicle.Altitude.Change", "Vehicle.X.alt_change"],
+)
+def test_relative_altitude_change_stays_refused_locally(path):
+    """Deliberately stricter than the D-076 floor of vehicle-defs."""
+    assert is_position_path(path)
+
+
+@pytest.mark.position_vectors
+def test_defs_position_vectors():
+    import json
+
+    from vehicle_linux_node.defs import DEFS_ROOT
+
+    vectors = json.loads((DEFS_ROOT / "privacy" / "position_vectors.json").read_text())
+    assert vectors["is_position_key"]
+    for case in vectors["is_position_key"]:
+        if case["expected"]:
+            assert is_position_path(case["name"]), case["name"]  # never looser than the floor
