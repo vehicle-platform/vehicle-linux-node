@@ -110,3 +110,17 @@ jobs:
       - name: Full per-check output (diagnostics)
         if: always()
         run: python3 scripts/check_systemd_exposure.py --verbose || true
+
+  # Aggregate required check (QUALITY CI-4): one stable name for the ruleset.
+  # `skipped` counts as OK; `failure` and `cancelled` fail it.
+  ci-ok:
+    if: always()
+    needs: [test, kuksa-replay, systemd-exposure]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every needed job succeeded or was skipped
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          echo "$NEEDS" | jq -e 'all(.[]; .result == "success" or .result == "skipped")' > /dev/null
