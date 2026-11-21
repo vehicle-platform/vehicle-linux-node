@@ -12,17 +12,16 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Any
 
-# Mirrors vehicle-server's position rule (D-076): nothing that names a
-# position is ever buffered, whatever the defs map in the future.
-_POSITION_RE = re.compile(
-    r"(^|\.)(CurrentLocation|Latitude|Longitude|Altitude|Position|GNSS\.Position)(\.|$)|"
-    r"(^|[._])(lat|lon|lng|alt)(itude)?([._]|$)",
-    re.IGNORECASE,
-)
+from vehicle_linux_node.defs import is_defs_position_name
+
+# The one position rule is vehicle-defs' (D-076, T22). The black box is deliberately
+# stricter than that floor: relative altitude change is not recorded locally, so the
+# legacy vertical pattern (which also refuses ``altitude_change`` / ``alt_change``) stays.
+_LEGACY_VERTICAL_RE = re.compile(r"(^|[._])(alt)(itude)?([._]|$)", re.IGNORECASE)
 
 
 def is_position_path(path: str) -> bool:
-    return _POSITION_RE.search(path) is not None
+    return is_defs_position_name(path) or _LEGACY_VERTICAL_RE.search(path) is not None
 
 
 @dataclass(frozen=True)

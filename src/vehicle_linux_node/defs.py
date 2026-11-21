@@ -73,15 +73,27 @@ def dbc2vss_mappings(path: Path = VSS_DBC_JSON) -> list[VssMapping]:
     return list(_walk(tree, ()))
 
 
-def vehicle_bus_bitrate() -> int:
-    """Bitrate of the CL250 vehicle bus from the generated ``vehicle_cl250`` module."""
+def _ensure_defs_on_path() -> None:
     import sys
 
     if str(DEFS_PYTHON) not in sys.path:
         sys.path.insert(0, str(_require(DEFS_PYTHON / "vehicle_defs" / "__init__.py").parents[1]))
+
+
+def vehicle_bus_bitrate() -> int:
+    """Bitrate of the CL250 vehicle bus from the generated ``vehicle_cl250`` module."""
+    _ensure_defs_on_path()
     from vehicle_defs import vehicle_cl250
 
     return int(vehicle_cl250.BITRATE)
+
+
+def is_defs_position_name(name: str) -> bool:
+    """The D-076 position rule of vehicle-defs (``vehicle_defs.position``, T22)."""
+    _ensure_defs_on_path()
+    from vehicle_defs.position import is_position_name
+
+    return bool(is_position_name(name))
 
 
 def platform_bus_bitrate(db: Database | None = None) -> int | None:
