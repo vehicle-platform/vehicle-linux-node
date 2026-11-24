@@ -128,7 +128,7 @@ and templates.
 The hardening options in the units are scored, not just present. CI job `systemd-exposure`
 runs `scripts/check_systemd_exposure.py`, which feeds every unit (as `install.sh` rewrites it)
 to `systemd-analyze security --offline=true` and fails when a score exceeds the ceiling in
-`deploy/exposure-thresholds.json` (measured 1.6 OK for blackbox, live and both CAN units, ceiling 1.8; `vehicle-llama` ceiling 1.8, see the CI summary for its score; `vehicle-kuksa` 8.6 EXPOSED, ceiling 8.8, the
+`deploy/exposure-thresholds.json` (measured 1.6 OK for blackbox, live and both CAN units, ceiling 1.8; `vehicle-llama` measured 1.0 OK, ceiling 1.2; `vehicle-kuksa` 8.6 EXPOSED, ceiling 8.8, the
 documented docker-compose exception). Ratchet a ceiling down when a unit improves; never raise
 one without a reason in the PR. Not enabled in the units on purpose: `MemoryDenyWriteExecute`
 (grpc/numpy/OpenCV wheels may map W+X pages; try it on the Pi first). `vehicle-llama` does set
