@@ -1,0 +1,72 @@
+# Rider-assistant LLM (D-121, provisional): llama.cpp `llama-server`, OpenAI-compatible HTTP on
+# loopback only. vehicle-server's /chat calls it at VEHICLE_LLM_URL (default http://127.0.0.1:8081/v1).
+# NOT enabled by install.sh: build llama.cpp, fetch a model and write /etc/vehicle/llama.env first
+# (see deploy/README.md). Lane keeping keeps its timing (invariant 4): the unit is capped to
+# 1.5 of the 4 cores, runs at the lowest CPU/IO priority and cannot use more than 3 GB.
+[Unit]
+Description=vehicle-platform rider-assistant LLM (llama.cpp llama-server, loopback only)
+After=network.target
+ConditionPathExists=/etc/vehicle/llama.env
+
+[Service]
+Type=simple
+# Own unprivileged user, created per start. install.sh does not add User= to this unit.
+DynamicUser=yes
+# Defaults; /etc/vehicle/llama.env overrides them and must set LLAMA_MODEL.
+Environment=LLAMA_THREADS=2
+Environment=LLAMA_CTX=2048
+EnvironmentFile=/etc/vehicle/llama.env
+ExecStart=/usr/local/bin/llama-server --host 127.0.0.1 --port 8081 --model ${LLAMA_MODEL} --threads ${LLAMA_THREADS} --ctx-size ${LLAMA_CTX} --parallel 1 --no-webui
+Restart=on-failure
+RestartSec=10
+# a missing model is a configuration error, not a crash: do not restart-loop
+RestartPreventExitStatus=1
+
+# Resource caps: never starve lane keeping / Kuksa on the 4-core Pi 5.
+CPUQuota=150%
+CPUWeight=20
+Nice=10
+CPUSchedulingPolicy=batch
+IOSchedulingClass=idle
+MemoryMax=3G
+MemorySwapMax=0
+TasksMax=64
+LimitCORE=0
+
+# Sandbox (B-11). The model is read from /var/lib/vehicle/models (root-owned, world-readable).
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateUsers=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectKernelLogs=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged
+SystemCallErrorNumber=EPERM
+MemoryDenyWriteExecute=yes
+PrivateDevices=yes
+RemoveIPC=yes
+KeyringMode=private
+CapabilityBoundingSet=
+AmbientCapabilities=
+# Loopback only: nothing leaves the Pi (no ride data to a third party, D-121).
+IPAddressDeny=any
+IPAddressAllow=localhost
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadOnlyPaths=/var/lib/vehicle/models
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

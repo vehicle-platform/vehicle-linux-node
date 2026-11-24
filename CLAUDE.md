@@ -62,6 +62,10 @@ As built: `src/vehicle_linux_node/defs.py` (paths into the pinned defs, `load_pl
 
 `deploy/`: systemd units `vehicle-can-platform@<if>` (platform bus up, bitrate from the defs), `vehicle-can-vehicle-tap@<if>` (optional CL250 tap, `listen-only on` always), `vehicle-kuksa` (docker compose), `vehicle-blackbox`; `deploy/install.sh` syncs `--extra kuksa` and installs them; `vehicle-linux-node-can {platform|vehicle-tap} <if> [--dry-run]` builds the `ip link` commands (`src/vehicle_linux_node/canif.py`). The platform bitrate is the `Baudrate` attribute of `platform.dbc` (`defs.platform_bus_bitrate()`); no CLI override.
 
+## Rider-assistant LLM (D-121, provisional)
+
+`deploy/systemd/vehicle-llama.service` runs llama.cpp `llama-server` on 127.0.0.1:8081 (DynamicUser, loopback-only, CPU/IO/memory caps; never enabled by `install.sh`); `deploy/llama/build-llama.sh` builds it from a pinned tag+commit, `deploy/llama/fetch-model.sh` downloads a Q4_K_M GGUF with a pinned SHA-256 (`VERIFY` entries are refused; models are never committed); `src/vehicle_linux_node/llmbench.py` (`vehicle-linux-node-llm-bench`, stdlib only) measures TTFT, latency, tokens/s and number grounding on synthetic Turkish prompts. vehicle-server's `/chat` calls it at `VEHICLE_LLM_URL`. Model choice is a config value, recorded in DECISIONS after measuring on the Pi.
+
 ## LDW offline stage (as built)
 
 `src/vehicle_linux_node/ldw/` (optional extra `ldw`: `uv sync --extra ldw`): `pipeline.py` = §5b.5 steps on one BGR frame (lean derotation, optional undistort, HLS + Sobel threshold, bird's-eye warp, sliding-window fit, offset in metres, `departure()` with indicator suppression), `synthetic.py` renders lanes with a known offset through the inverse warp (no recorded video in the repo, D-033), `cli.py` = `vehicle-linux-node-ldw <image|video|synthetic> [--lean-deg] [--indicator-on]`. `LdwConfig` holds camera geometry and provisional tuning (departure threshold 0.45 m, looser than a car); nothing opens a camera, CAN or Kuksa yet. Next: calibrate `src_quad` to the real mount, then lean from `Vehicle.Motorcycle.LeanAngle` and the indicator state from Kuksa.
