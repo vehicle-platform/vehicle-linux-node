@@ -10,6 +10,7 @@ Plain systemd services, no Kanto (CLAUDE.md). Everything runs from a user checko
 | `vehicle-kuksa` | Kuksa Databroker + kuksa-can-provider | `docker compose`, `CAN_PORT=can0`, databroker on 127.0.0.1 only |
 | `vehicle-blackbox` | black-box recorder | `VEHICLE_BLACKBOX_DIR=$HOME/vehicle-data/blackbox`, `vehicle-linux-node-blackbox trigger <reason>` fires an event |
 | `vehicle-live` | live telemetry uplink Kuksa -> MQTT 5 (D-109, provisional) | installed, **disabled by default**; see below |
+| `vehicle-server` | native edge vehicle-server (D-077 local instance, D-122), 0.0.0.0:8000 | installed, **not enabled by `install.sh`**; `deploy/pi/provision.sh` enables it; see "New Pi from scratch" |
 | `vehicle-llama` | rider-assistant LLM, llama.cpp `llama-server` on 127.0.0.1:8081 (D-121, provisional) | installed, **disabled by default**; see "Rider assistant LLM" |
 
 CAN HAT: enable the overlay for your board in `/boot/firmware/config.txt`
@@ -122,6 +123,52 @@ and templates.
 
    Pick the smallest model that passes the first two. Record the choice in `DECISIONS.md` through
    Claude (a model is a config value: the choice is only `LLAMA_MODEL`).
+
+## New Pi from scratch (D-121/D-122)
+
+A fresh Raspberry Pi 5 is reproducible from this repo alone (stdlib-only Python, POSIX sh).
+
+1. **Write the OS.** Raspberry Pi OS Lite 64-bit (trixie) to a USB SSD or SD card, with Raspberry
+   Pi Imager, or by hand: download the `.img.xz` and its `.sha256` from raspberrypi.com, check
+   `shasum -a 256 -c`, then `xzcat <image>.img.xz | sudo dd of=/dev/rdiskN bs=4m` (macOS; on Linux
+   `/dev/sdX`, `bs=4M`, `status=progress`). Triple-check the device name first.
+2. **First-boot config** (leave the disk mounted; `bootfs` appears under `/Volumes` on macOS or
+   `/media/$USER` on Linux). Needs an SSH key: `ssh-keygen -t ed25519 -f ~/.ssh/vehiclepi_ed25519 -C vehiclepi`.
+
+   ```bash
+   python3 deploy/pi/setup-bootfs.py                          # macOS
+   python3 deploy/pi/setup-bootfs.py --boot /media/$USER/bootfs --country DE --hostname vehiclepi2
+   ```
+
+   It asks (hidden, never on argv or printed) for the hotspot SSID and password and the `vehicle`
+   user's password, and writes cloud-init `user-data`, `network-config` (NetworkManager), `ssh`.
+   Options: `--hostname` (vehiclepi), `--user` (vehicle), `--pubkey`, `--country` (TR),
+   `--usb-max-current` (adds `usb_max_current_enable=1`; only for a USB SSD on a supply that
+   cannot give 5 A; prefer the official 27 W supply).
+3. **Boot** the Pi with the phone hotspot on, wait a few minutes for cloud-init, then
+   `ssh vehicle@vehiclepi.local`.
+4. **Provision** (on the Pi; get the script with `curl -fsSLO https://raw.githubusercontent.com/vehicle-platform/vehicle-linux-node/main/deploy/pi/provision.sh`):
+
+   ```bash
+   sh provision.sh --dry-run                                   # the plan only
+   sh provision.sh --with-llama --model qwen2.5-1.5b
+   ```
+
+   Idempotent: apt packages, uv, the three repos under `~/vehicle-platform` (vehicle-server over a
+   read-only deploy key; the script prints the exact key steps when `~/.ssh/github_vehicle_server`
+   is missing), `uv sync`, llama.cpp, the model and `/etc/vehicle/llama.env`, the data dir
+   `/var/lib/vehicle/data`, `/etc/vehicle/server.env` (0600, fresh random `VEHICLE_API_TOKEN`,
+   never printed), the units, `systemctl enable --now vehicle-server` (and `vehicle-llama`). It
+   finishes by printing the next steps: copy the Flutter web build to `~/web-app`, run
+   `vehicle-server vehicle add --name ... --device ...`, register in the app.
+5. **Notes.**
+   - Power: use the 27 W supply. A laptop USB-C adapter caused undervoltage;
+     `vcgencmd get_throttled` showed `0x50000` (throttling occurred). Expect `0x0` under load.
+   - Hotspot data: the first provision downloads about 2 GB (apt, repos, the model, uv wheels).
+     Do it on Wi-Fi without a data cap when you can.
+   - Shared hotspot: `vehicle-server` listens on 0.0.0.0:8000 so the phone can reach it, which
+     also shows the login page to everyone on the same hotspot. Auth is the operator token and
+     user accounts; keep the token secret and the hotspot password strong.
 
 ## Verifying the sandbox (EDGE-1)
 

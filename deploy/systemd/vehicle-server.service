@@ -1,0 +1,54 @@
+# Native (non-Docker) edge vehicle-server on the Pi (D-077 local instance, D-122). Serves the
+# REST API, the web app (VEHICLE_WEB_APP_DIR) and /chat (D-121) on 0.0.0.0:8000 so the phone can
+# reach it over the LAN. The API needs auth (VEHICLE_API_TOKEN, operator login); on a SHARED
+# hotspot the login page is visible to every other hotspot user, so keep the token long and secret.
+# NOT enabled by install.sh: provision.sh (or you) writes /etc/vehicle/server.env first.
+# It spawns vehicle-mcp as a subprocess and calls llama-server on 127.0.0.1:8081 and itself on
+# 127.0.0.1:8000, so no IP filter and AF_UNIX/INET stay allowed; the checkout is read from $HOME.
+[Unit]
+Description=vehicle-platform edge vehicle-server (REST, web app, /chat)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/vehicle/server.env
+
+[Service]
+Type=simple
+WorkingDirectory=%h/vehicle-platform/vehicle-server
+EnvironmentFile=/etc/vehicle/server.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=%h/vehicle-platform/vehicle-server/.venv/bin/vehicle-server serve --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5
+
+# Sandbox (B-11). ProtectHome=read-only, not yes: the checkout and venvs live in $HOME.
+# MemoryDenyWriteExecute stays off (numpy/pyarrow wheels may map W+X pages).
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectKernelLogs=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+PrivateDevices=yes
+RemoveIPC=yes
+MemoryMax=1G
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadWritePaths=/var/lib/vehicle/data
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
