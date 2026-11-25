@@ -66,6 +66,10 @@ As built: `src/vehicle_linux_node/defs.py` (paths into the pinned defs, `load_pl
 
 `deploy/systemd/vehicle-llama.service` runs llama.cpp `llama-server` on 127.0.0.1:8081 (DynamicUser, loopback-only, CPU/IO/memory caps; never enabled by `install.sh`); `deploy/llama/build-llama.sh` builds it from a pinned tag+commit, `deploy/llama/fetch-model.sh` downloads a Q4_K_M GGUF with a pinned SHA-256 (`VERIFY` entries are refused; models are never committed); `src/vehicle_linux_node/llmbench.py` (`vehicle-linux-node-llm-bench`, stdlib only) measures TTFT, latency, tokens/s and number grounding on synthetic Turkish prompts. vehicle-server's `/chat` calls it at `VEHICLE_LLM_URL`. Model choice is a config value, recorded in DECISIONS after measuring on the Pi.
 
+## Pi provisioning (as built, D-121/D-122)
+
+`deploy/pi/setup-bootfs.py` (headless cloud-init first boot, stdlib only; `tests/test_setup_bootfs.py` covers the text builders), `deploy/pi/provision.sh` (idempotent POSIX sh run on the Pi: apt, uv, repos under `~/vehicle-platform`, `uv sync`, llama.cpp + model, `/etc/vehicle/{server,llama}.env`, units, `--dry-run`), `deploy/systemd/vehicle-server.service` (native edge vehicle-server on 0.0.0.0:8000, not enabled by `install.sh`). Steps: `deploy/README.md` "New Pi from scratch".
+
 ## LDW offline stage (as built)
 
 `src/vehicle_linux_node/ldw/` (optional extra `ldw`: `uv sync --extra ldw`): `pipeline.py` = §5b.5 steps on one BGR frame (lean derotation, optional undistort, HLS + Sobel threshold, bird's-eye warp, sliding-window fit, offset in metres, `departure()` with indicator suppression), `synthetic.py` renders lanes with a known offset through the inverse warp (no recorded video in the repo, D-033), `cli.py` = `vehicle-linux-node-ldw <image|video|synthetic> [--lean-deg] [--indicator-on]`. `LdwConfig` holds camera geometry and provisional tuning (departure threshold 0.45 m, looser than a car); nothing opens a camera, CAN or Kuksa yet. Next: calibrate `src_quad` to the real mount, then lean from `Vehicle.Motorcycle.LeanAngle` and the indicator state from Kuksa.
