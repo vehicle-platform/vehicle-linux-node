@@ -29,6 +29,8 @@ SCORE = re.compile(r"Overall exposure level for \S+:\s*([0-9.]+)\s+(\w+)")
 def installed_form(text: str) -> str:
     """Mimic deploy/install.sh: substitute %h and add User= under [Service]."""
     text = text.replace("%h", "/home/pi")
+    if re.search(r"^DynamicUser=yes$", text, flags=re.M):
+        return text  # own unprivileged user: install.sh adds no User=
     return re.sub(r"^\[Service\]$", "[Service]\nUser=pi", text, count=1, flags=re.M)
 
 

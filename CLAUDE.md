@@ -34,7 +34,7 @@ The SDV/HPC layer running on a **Raspberry Pi 5 (8 GB)** (mostly Python, C++ whe
 `uv` + `ruff` + `pytest` (D-007), Python 3.11+. Kuksa runs via `docker compose` (`docker-compose.yml`: databroker 0.7.1 + kuksa-can-provider 0.5.1, host networking, `config/dbc_feeder.ini`, receive-only: `val2dbc` off). In development, recorded data is replayed with `vcan0/vcan1` + `canplayer`, so it works without a Raspi too.
 
 ```bash
-git submodule update --init --recursive   # external/vehicle-defs, pinned to v0.29.0
+git submodule update --init --recursive   # external/vehicle-defs, pinned to v0.31.0
 uv sync
 uv run ruff check . && uv run ruff format --check .
 uv run pytest
@@ -61,6 +61,14 @@ As built: `src/vehicle_linux_node/defs.py` (paths into the pinned defs, `load_pl
 ## Deployment (as built)
 
 `deploy/`: systemd units `vehicle-can-platform@<if>` (platform bus up, bitrate from the defs), `vehicle-can-vehicle-tap@<if>` (optional CL250 tap, `listen-only on` always), `vehicle-kuksa` (docker compose), `vehicle-blackbox`; `deploy/install.sh` syncs `--extra kuksa` and installs them; `vehicle-linux-node-can {platform|vehicle-tap} <if> [--dry-run]` builds the `ip link` commands (`src/vehicle_linux_node/canif.py`). The platform bitrate is the `Baudrate` attribute of `platform.dbc` (`defs.platform_bus_bitrate()`); no CLI override.
+
+## Rider-assistant LLM (D-121, provisional)
+
+`deploy/systemd/vehicle-llama.service` runs llama.cpp `llama-server` on 127.0.0.1:8081 (DynamicUser, loopback-only, CPU/IO/memory caps; never enabled by `install.sh`); `deploy/llama/build-llama.sh` builds it from a pinned tag+commit, `deploy/llama/fetch-model.sh` downloads a Q4_K_M GGUF with a pinned SHA-256 (`VERIFY` entries are refused; models are never committed); `src/vehicle_linux_node/llmbench.py` (`vehicle-linux-node-llm-bench`, stdlib only) measures TTFT, latency, tokens/s and number grounding on synthetic Turkish prompts. vehicle-server's `/chat` calls it at `VEHICLE_LLM_URL`. Model choice is a config value, recorded in DECISIONS after measuring on the Pi.
+
+## Pi provisioning (as built, D-121/D-122)
+
+`deploy/pi/setup-bootfs.py` (headless cloud-init first boot, stdlib only; `tests/test_setup_bootfs.py` covers the text builders), `deploy/pi/provision.sh` (idempotent POSIX sh run on the Pi: apt, uv, repos under `~/vehicle-platform`, `uv sync`, llama.cpp + model, `/etc/vehicle/{server,llama}.env`, units, `--dry-run`), `deploy/systemd/vehicle-server.service` (native edge vehicle-server on 0.0.0.0:8000, not enabled by `install.sh`). Steps: `deploy/README.md` "New Pi from scratch".
 
 ## LDW offline stage (as built)
 
