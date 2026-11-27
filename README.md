@@ -23,6 +23,34 @@ uv run pytest
 - Signals, CAN IDs and DIDs come only from [vehicle-defs](https://github.com/vehicle-platform/vehicle-defs) (git submodule pinned to a tag)
 - Scope rules for contributors and Claude Code: [`CLAUDE.md`](CLAUDE.md)
 
+## Run on macOS without a Raspberry Pi
+
+The Kuksa replay stack (synthetic platform-bus replay -> kuksa-can-provider -> Databroker) runs on an Apple Silicon Mac with [colima](https://github.com/abiosoft/colima) (no Docker Desktop). The images are multi-arch, so the arm64 VM pulls the pinned digests as is.
+
+```bash
+brew install colima docker docker-compose
+# let `docker compose` find the Homebrew plugin: add to ~/.docker/config.json
+#   "cliPluginsExtraDirs": ["/opt/homebrew/lib/docker/cli-plugins"]
+colima start --cpu 2 --memory 2 --disk 20
+
+git submodule update --init
+uv sync --locked --extra kuksa
+uv run vehicle-linux-node-replay replay/          # replay/ is git-ignored
+docker compose -f docker-compose.yml -f docker-compose.replay.yml up -d
+```
+
+The services use `network_mode: host`, which on colima is the Linux VM's network, and the Databroker binds `127.0.0.1` there, so the Mac cannot reach `127.0.0.1:55555`. Read the values from a container on the VM host network:
+
+```bash
+docker run --rm --network host python:3.12-slim sh -c \
+  'pip install -q kuksa-client && python -c "
+from kuksa_client.grpc import VSSClient
+with VSSClient(\"127.0.0.1\", 55555) as c:
+    print(c.get_current_values([\"Vehicle.Speed\", \"Vehicle.Powertrain.CombustionEngine.Speed\"]))"'
+```
+
+The synthetic replay is a steady state: `Vehicle.Speed` reads 94.35 and the engine speed 6062 (see `replay/expected.json`). The provider runs receive-only (`--no-val2dbc`). Stop with `docker compose -f docker-compose.yml -f docker-compose.replay.yml down` and free the RAM with `colima stop`.
+
 ## License
 
 MIT, see [LICENSE](LICENSE) (D-036).
