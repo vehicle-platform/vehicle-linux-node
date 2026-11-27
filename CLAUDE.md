@@ -31,7 +31,7 @@ The SDV/HPC layer running on a **Raspberry Pi 5 (8 GB)** (mostly Python, C++ whe
 
 ## Build/run
 
-`uv` + `ruff` + `pytest` (D-007), Python 3.11+. Kuksa runs via `docker compose` (`docker-compose.yml`: databroker 0.7.1 + kuksa-can-provider 0.5.1, host networking, `config/dbc_feeder.ini`, receive-only: `val2dbc` off). In development, recorded data is replayed with `vcan0/vcan1` + `canplayer`, so it works without a Raspi too.
+`uv` + `ruff` + `pytest` (D-007), Python 3.11+. Kuksa runs via `docker compose` (`docker-compose.yml`: databroker 0.7.2 + kuksa-can-provider 0.5.1, host networking, `config/dbc_feeder.ini`, receive-only: `val2dbc` off). In development, recorded data is replayed with `vcan0/vcan1` + `canplayer`, so it works without a Raspi too.
 
 ```bash
 git submodule update --init --recursive   # external/vehicle-defs, pinned to v0.31.0
