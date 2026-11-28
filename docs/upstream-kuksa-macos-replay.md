@@ -117,6 +117,6 @@ colima stop
 ## Open questions for the user before any upstream submission
 
 1. **Target repository and document location:** Should this contribution target `eclipse-kuksa/kuksa-can-provider` (e.g., `docs/` or `README.md` replay section), `eclipse-kuksa/kuksa-databroker`, or the central Eclipse KUKSA docs site?
-2. **GitHub account and ECA:** Which GitHub account should open the upstream PR, and is the Eclipse Contributor Agreement (ECA) signed for that account (Eclipse Foundation repositories require a signed ECA and `Signed-off-by` DCO trailer)?
+2. **GitHub account and ECA:** Which GitHub account should open the upstream PR, and is the Eclipse Contributor Agreement (ECA) signed for that account (Eclipse Foundation repositories are understood to require a signed ECA and a `Signed-off-by` trailer; not checked against the Eclipse contributor guide for this draft, **re-check before use**)?
 3. **Generic vs. repo-linked example:** Before submitting upstream, should we replace the `vehicle-linux-node-replay` step with a self-contained 10-line synthetic DBC + `vss_dbc.json` + `candump` snippet so upstream readers do not need to clone `vehicle-linux-node`?
 4. **Bridge-network alternative:** Should the upstream guide show only the `--network host` colima workflow verified in PR #35, or should we first test and verify (**CONFIRM**) the bridge-network + `127.0.0.1:55555:55555` port-forwarding variant for macOS-native clients?
